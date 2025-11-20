@@ -8,11 +8,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- KaTeX CSS and JS for rendering LaTeX math -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrFXWq6FV5bWJqL5lO/QWvQ22I09iF/wz48K3L+P3g3f5T/8iR7ZJ/e/WwE+2s" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css" xintegrity="sha384-GvrFXWq6FV5bWJqL5lO/QWvQ22I09iF/wz48K3L+P3g3fT/8iR7ZJ/e/WwE+2s" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js" xintegrity="sha384-Y1Wp1o75z0z3/R/nJbWz4z5O7Gz0v8K5M5WJ/e/WwE+2s" crossorigin="anonymous"></script>
 
     <style>
-        /* Custom styles for a clean, academic look.*/
+        /* Custom styles for a clean, academic look */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7ffec; /* Light green/academic background */
@@ -106,76 +106,131 @@
         </div>
         
         <!-- Results Display Table -->
-        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 border-gray-200">Empirical Results</h2>
+        <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2 border-gray-200">Simulation Results</h2>
         <div class="bg-white border border-gray-200 rounded-lg shadow-inner overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Metric</th>
                         <th class="px-6 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider">Empirical Value</th>
+                        <th id="analytical-header" class="px-6 py-3 text-left text-sm font-bold text-gray-700 uppercase tracking-wider hidden">Analytical Value</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-medium text-gray-900">Probability of Ruin <span id="label-prob-ruin"></span></td>
                         <td id="emp-prob-ruin" class="px-6 py-4 whitespace-nowrap text-lg text-red-600 font-bold">--</td>
+                        <td id="ana-prob-ruin" class="px-6 py-4 whitespace-nowrap text-lg text-red-900 font-bold hidden">--</td>
                     </tr>
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-medium text-gray-900">Probability of Winning <span id="label-prob-win"></span></td>
                         <td id="emp-prob-win" class="px-6 py-4 whitespace-nowrap text-lg text-green-600 font-bold">--</td>
+                        <td id="ana-prob-win" class="px-6 py-4 whitespace-nowrap text-lg text-green-900 font-bold hidden">--</td>
+                        
                     </tr>
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap text-lg font-medium text-gray-900">Expected Steps <span id="label-expected-time"></span></td>
                         <td id="emp-expected-time" class="px-6 py-4 whitespace-nowrap text-lg text-blue-600 font-bold">--</td>
+                        <td id="ana-expected-time" class="px-6 py-4 whitespace-nowrap text-lg text-blue-900 font-bold hidden">--</td>
                     </tr>
                 </tbody>
             </table>
         </div>
         
-        <!-- Error Message -->
+        <!-- Password Check and Reveal Button -->
+        <div class="mt-8 p-4 border border-lime-300 rounded-lg bg-lime-50" id="analytical-control-panel">
+            <h3 class="text-lg font-bold text-gray-800 mb-3">Analytical Solution Check</h3>
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+                <input type="password" id="analytical-password" class="w-full sm:w-1/2 rounded-md border-gray-300 shadow-sm focus:border-lime-500 focus:ring-lime-500 p-2 border" placeholder="Enter password to reveal analytical results">
+                <button onclick="revealAnalyticalResults()" id="reveal-button" class="w-full sm:w-auto bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-4 focus:ring-gray-300 disabled:opacity-50">
+                    Reveal Solution
+                </button>
+            </div>
+            <p id="password-message" class="text-sm mt-3 font-semibold"></p>
+        </div>
+
+        <!-- Error/Status Message -->
         <div id="error-message" class="mt-6 text-red-700 font-semibold bg-red-100 p-3 rounded-lg hidden"></div>
 
     </div>
 
     <script>
+        // ***************************************************************
+        // --- IMPORTANT: CHANGE THIS PASSWORD BEFORE DEPLOYMENT ---
+        const SECRET_KEY = "RandomWalksRule"; 
+        // ***************************************************************
+
+        // Store analytical results globally or in a local cache after simulation runs
+        let cachedAnalyticalResults = null;
+
         // --- Utility function to render LaTeX labels using KaTeX ---
         function renderLatexLabels() {
             if (typeof katex !== 'undefined') {
                 try {
                     // P_0(n)
-                    katex.render("P_0(n)", document.getElementById('label-prob-ruin'), {
-                        throwOnError: false
-                    });
+                    katex.render("P_0(n)", document.getElementById('label-prob-ruin'), { throwOnError: false });
                     // P_N(n)
-                    katex.render("P_N(n)", document.getElementById('label-prob-win'), {
-                        throwOnError: false
-                    });
+                    katex.render("P_N(n)", document.getElementById('label-prob-win'), { throwOnError: false });
                     // E(n)
-                    katex.render("E(n)", document.getElementById('label-expected-time'), {
-                        throwOnError: false
-                    });
+                    katex.render("E(n)", document.getElementById('label-expected-time'), { throwOnError: false });
                 } catch (e) {
                     console.error("KaTeX rendering failed:", e);
                 }
             }
         }
         
+        // --- Analytical Solver Logic ---
+
+        /**
+         * Calculates the analytical solutions for Gambler's Ruin.
+         * @param {number} N - Win Goal (Total States).
+         * @param {number} p - Probability of success.
+         * @param {number} n_start - Starting state.
+         * @returns {{probRuin: number, probWin: number, expectedTime: number}}
+         */
+        function getAnalyticalSolutions(N, p, n_start) {
+            const q = 1 - p;
+
+            let probRuin, expectedTime;
+
+            // Check for near-equality to handle floating point precision issues
+            if (Math.abs(p - 0.5) < 1e-6) {
+                // Case 1: Fair Game (p = 0.5)
+                // P_0(n) = (N - n) / N
+                probRuin = (N - n_start) / N;
+                // E(n) = n * (N - n)
+                expectedTime = n_start * (N - n_start);
+            } else {
+                // Case 2: Unfair Game (p != 0.5)
+                const rho = q / p;
+                const rho_n = Math.pow(rho, n_start);
+                const rho_N = Math.pow(rho, N);
+
+                // Probability of Ruin P_0(n)
+                // P_0(n) = (rho^n - rho^N) / (1 - rho^N)
+                probRuin = (rho_n - rho_N) / (1 - rho_N);
+                
+                // Expected Steps E(n)
+                // E(n) = n/(q-p) - N/(q-p) * (1 - rho^n) / (1 - rho^N)
+                expectedTime = (n_start / (q - p)) - (N / (q - p)) * ((1 - rho_n) / (1 - rho_N));
+            }
+
+            // Probability of Winning P_N(n) = 1 - P_0(n)
+            const probWin = 1 - probRuin;
+
+            return { probRuin, probWin, expectedTime };
+        }
+
         // --- Core Empirical Simulation Logic ---
 
         /**
          * Runs a single random walk simulation.
-         * @param {number} N - Total states (Win Goal).
-         * @param {number} p - Probability of success (moving up).
-         * @param {number} n_start - Starting state.
-         * @returns {{finalState: number, steps: number}} - Result of the walk.
          */
         function runSingleWalk(N, p, n_start) {
             let current_n = n_start;
             let steps = 0;
-
             // Loop until an absorbing state (0 or N) is reached
             while (current_n > 0 && current_n < N) {
-                // Determine direction based on probability p
                 if (Math.random() < p) {
                     current_n++; // Move toward N (Win)
                 } else {
@@ -190,7 +245,6 @@
          * Validates inputs, runs the large-scale simulation, and updates the display.
          */
         function runEmpiricalSimulation() {
-            // Get all parameters
             const N = parseInt(document.getElementById('total-states').value);
             const p = parseFloat(document.getElementById('success-prob').value);
             const n_start = parseInt(document.getElementById('start-state').value);
@@ -220,11 +274,13 @@
             loadingMessage.textContent = `Starting ${M.toLocaleString()} simulations...`;
             loadingOverlay.classList.add('visible');
             
+            // Hide analytical results on every new run
+            hideAnalyticalResults();
+
             // Use a timeout to allow the loading spinner to render before computation starts, preventing UI lockup
             setTimeout(() => {
                 let ruinCount = 0;
                 let totalSteps = 0;
-                
                 const startTime = performance.now();
 
                 // Run M number of simulations
@@ -244,10 +300,13 @@
                 const endTime = performance.now();
                 const totalTime = ((endTime - startTime) / 1000).toFixed(2);
 
-                // --- 3. Calculate Empirical Metrics ---
+                // --- 3. Calculate Empirical & Analytical Metrics ---
                 const empProbRuin = ruinCount / M;
                 const empProbWin = (M - ruinCount) / M;
                 const empExpectedTime = totalSteps / M;
+
+                // Store Analytical Results for later access
+                cachedAnalyticalResults = getAnalyticalSolutions(N, p, n_start);
 
                 // --- 4. Update Display ---
                 empProbRuinEl.textContent = empProbRuin.toFixed(5);
@@ -273,14 +332,60 @@
             }, 50); // Small delay to ensure loading state shows
         }
 
-        // Auto-run a small simulation on load for immediate results
+        // --- Password and Display Control Logic ---
+
+        function revealAnalyticalResults() {
+            const passwordInput = document.getElementById('analytical-password');
+            const passwordMessage = document.getElementById('password-message');
+
+            if (passwordInput.value === SECRET_KEY) {
+                if (cachedAnalyticalResults) {
+                    // Show the column header and the result cells
+                    document.getElementById('analytical-header').classList.remove('hidden');
+                    document.getElementById('ana-prob-ruin').classList.remove('hidden');
+                    document.getElementById('ana-prob-win').classList.remove('hidden');
+                    document.getElementById('ana-expected-time').classList.remove('hidden');
+
+                    // Populate the results
+                    document.getElementById('ana-prob-ruin').textContent = cachedAnalyticalResults.probRuin.toFixed(5);
+                    document.getElementById('ana-prob-win').textContent = cachedAnalyticalResults.probWin.toFixed(5);
+                    document.getElementById('ana-expected-time').textContent = cachedAnalyticalResults.expectedTime.toFixed(2);
+
+                    passwordMessage.textContent = "Success! Analytical results displayed.";
+                    passwordMessage.classList.add('text-green-700');
+                    passwordMessage.classList.remove('text-red-700');
+                } else {
+                    passwordMessage.textContent = "Error: Please run the simulation first to calculate results.";
+                    passwordMessage.classList.add('text-red-700');
+                    passwordMessage.classList.remove('text-green-700');
+                }
+            } else {
+                passwordMessage.textContent = "Incorrect password. Please try again.";
+                passwordMessage.classList.add('text-red-700');
+                passwordMessage.classList.remove('text-green-700');
+                passwordInput.value = ''; // Clear the input
+            }
+        }
+
+        function hideAnalyticalResults() {
+            // Hides the analytical results column and clears the input
+            document.getElementById('analytical-header').classList.add('hidden');
+            document.getElementById('ana-prob-ruin').classList.add('hidden');
+            document.getElementById('ana-prob-win').classList.add('hidden');
+            document.getElementById('ana-expected-time').classList.add('hidden');
+            document.getElementById('analytical-password').value = '';
+            document.getElementById('password-message').textContent = '';
+        }
+
+        // Auto-run a small simulation on load for immediate empirical results
         window.onload = function() {
             // Render the LaTeX labels immediately upon load
-            renderLatexLabels(); 
+            renderLatexLabels();
             
             // Set M to 10,000 for faster initial load
             document.getElementById('num-simulations').value = 10000;
             runEmpiricalSimulation();
+            
             // Reset M back to 100,000 after the initial run for better accuracy
             document.getElementById('num-simulations').value = 100000;
         };
